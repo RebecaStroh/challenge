@@ -9,18 +9,22 @@ function read() {
 	fs.readFile(path.join(__dirname, 'input.csv'), 'utf8', (err, content) => { 
 		if (err) throw err
 
-		// var lines = content.split("\n")
+		// trata das virgulas 
+		var t = content.split('"')
+		for (var i=1;i<t.length; i=i+2){
+			t[i] = t[i].split(',').join('/')
+		}
+		content = t.join('')
 
-		// var header = lines[0].split(',')[0]
-
+		// divide o arquivo em linhas e colunas
 	    var allTextLines = content.split(/\r\n|\n/)
 	    var headings = allTextLines[0].split(',')
 	    var lines = []
 	    var indices = []
 
 	    for (var i=0; i<headings.length; i++) {
-	    	headings[i] = headings[i].split('"').join('');
-	    	var aux = headings[i].split(' ');
+	    	headings[i] = headings[i].split('"').join('')
+	    	var aux = headings[i].split(' ')
 	
 	    	switch (aux[0]) {
 	    		case 'email':
@@ -47,30 +51,25 @@ function read() {
 				    }
 	    			indices.push({type:'address', content: address})
 	    			break;
-	    		case 'group':
-	    			indices.push({type:'group'})
-	    			break;
-	    		case 'invisible':
-	    			indices.push({type:'invisible'})
-	    			break;
-	    		case 'see_all':
-	    			indices.push({type:'boolean', content:'see_all'})
-	    			break;
-	    		case 'fullname':
-	    			indices.push({type:'string', content:'fullname'})
-	    			break;
-	    		case 'eid':
-	    			indices.push({type:'number', content:'eid'})
+	    		default:
+	    			indices.push({type:aux[0]})
 	    			break;
 	    	}
-
 	    }
 
 	    for (var i=1; i<allTextLines.length; i++) {
-	    	var data = allTextLines[i].split(',');
-	    	var person = [];
+	    	var data = allTextLines[i].split(',')
 	    	var groups = []
 	    	var addresses = []
+	    	var person = {
+				fullname: '',
+				eid: -1,
+				groups: [],
+				addresses: [],
+				invisible: false,
+				see_all: false
+	    	}
+
 		    for (var j=0; j<headings.length; j++) {	
 
 		    	switch (indices[j].type) {
@@ -87,64 +86,33 @@ function read() {
 		    			addresses.push(aux)
 		    			break;
 		    		case 'group':
-		    			groups.push(allTextLines[i][j])
+		    			var aux = data[j].split('/')
+		    			groups.push(data[j])
 		    			break;
-		    		case 'boolean':
-		    			person.push(indices[j].content+': '+data[j])
+		    		case 'invisible':
+		    			if ((data[j] == true) || (data[j] == 1) || (data[j] == 'yes')) {
+		    				person.invisible = true
+		    			}
 		    			break;
-		    		case 'string':
-		    			person.push(indices[j].content+': '+data[j])
+		    		case 'see_all':
+		    			if ((data[j] == true) || (data[j] == 1) || (data[j] == 'yes')) {
+		    				person.see_all = true
+		    			}
 		    			break;
-		    		case 'number':
-		    			person.push(indices[j].content+': '+data[j])
+		    		case 'fullname':
+		    			person.fullname = data[j]
+		    			break;
+		    		case 'eid':
+		    			person.eid = data[j]
 		    			break;
 		    	}
 		    }
-		    person.push({groups: groups})
-		    person.push({addresses: addresses})
+		    person.groups = groups
+		    person.addresses = addresses
 		    persons.push(person)
-		    
 		}
-		console.log(persons)
 
-
-	    // for (var i=1; i<allTextLines.length; i++) {
-	    //     var tarr = '{\n'
-	    //     for (var j=0; j<headings.length; j++) {
-	    //         tarr += (headings[j]+':'+'\n')
-	    //     }
-	    //     tarr += '}'
-	    //     lines.push(tarr)
-	    // }
-	    //console.log(lines)
-
-		// for (var i=1; i<lines.length; i++) {
-		// 	var column = lines[i].split(',')
-
-		// 	var addr = new Array()
-		// 	addr = [column[2],column[3],column[4],column[5],column[6],column[7]]
-
-		// 	var grp = new Array()
-		// 	grp = [column[8],column[9]]
-
-		// 	var person = {
-		// 		fullname:column[0],
-		// 		eid:column[1],
-		// 		groups: grp,
-		// 		addresses: addr,
-		// 		invisible:column[10],
-		// 		see_all:column[11]
-		// 	}
-
-		// 	var resul = checkExistence(persons, column[1])
-		// 	if (resul == -1) {
-		// 		persons.push(person)
-		// 	} else {
-		// 		persons.push(person)
-		// 	}
-		// }
-
-		 write(persons)
+		write(persons)
 	})
 }
 
