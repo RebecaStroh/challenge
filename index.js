@@ -5,8 +5,6 @@ const phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance()
 
 var persons = new Array()
 
-console.clear()
-
 function read() {
 	fs.readFile(path.join(__dirname, 'input.csv'), 'utf8', (err, content) => { 
 		if (err) throw err
@@ -78,6 +76,42 @@ function read() {
 	})
 }
 
+function checkEmail(email) {
+	if (email == '') {
+		return -1
+	}
+
+	const slices = email.split(' ');  	
+  	const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    
+  	for (var i in slices) {
+  		if (re.test(slices[i])){
+	    	return slices[i];
+	    }
+  	}
+
+  	return -1;	
+}
+
+function checkPhone(phone) {
+	const letters = /^[A-Za-z`!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]+$/
+	phone = phone.split(letters).join('')
+
+	if (phone == '') {
+		return -1
+	}
+
+	phone = phoneUtil.parseAndKeepRawInput(phone, 'BR')
+	if (!phoneUtil.isValidNumberForRegion(phone, 'BR')) {
+		return -1
+	}
+
+	phone = phoneUtil.format(phone, PNF.E164)
+	phone = phone.replace('+','')
+
+	return phone;
+}
+
 function createNew(indices, data) {
    	var groups = []
 	var addresses = []
@@ -91,57 +125,51 @@ function createNew(indices, data) {
 	}
 
     for (var j=0; j<indices.length; j++) {	
-    	switch (indices[j].type) {
-    		case 'address':
-    			switch (indices[j].content.type) {
-    				case 'phone':
-    					var letters = /^[A-Za-z`!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]+$/;
-    					data[j] = data[j].split(letters).join('')
-    					if (data[j] != '') {
-	    					const number = phoneUtil.parseAndKeepRawInput(data[j], 'BR');
-    						if (phoneUtil.isValidNumberForRegion(number, 'BR')) {
-	    						data[j] = phoneUtil.format(number, PNF.E164)
-	    						data[j] = data[j].replace('+','')
-	    						var aux = Object.assign({}, indices[j].content);
-	    						aux.address = data[j]
-	    						addresses.push(aux)
-    						}
-    					}
-    					break;
-    				case 'email':
+    	var datas = data[j].split('/')
+
+    	for (var d in datas) {
+	    	switch (indices[j].type) {
+	    		case 'address':
+	    			var address;
+	    			switch (indices[j].content.type) {
+	    				case 'phone':
+	    					address = checkPhone(datas[d])
+	    					break;
+	    				case 'email':
+	    					address = checkEmail(datas[d])
+	    					break;
+	    			}
+					if (address != -1) {
     					var aux = Object.assign({}, indices[j].content);
-    					aux.address = data[j]
+    					aux.address = address
     					addresses.push(aux)
-    					break;
-    			}
-    			break;
-    		case 'group':
-    			var aux = data[j].split('/')
-    			for (var a in aux) {
-    				aux[a] = aux[a].split(' ').join('')
-    				aux[a] = aux[a].replace('ala', 'ala ')
-    				if (aux[a] != '') {
-    					groups.push(aux[a])
     				}
-    			}
-    			break;
-    		case 'invisible':
-    			if ((data[j] == true) || (data[j] == 1) || (data[j] == 'yes')) {
-    				person.invisible = true
-    			}
-    			break;
-    		case 'see_all':
-    			if ((data[j] == true) || (data[j] == 1) || (data[j] == 'yes')) {
-    				person.see_all = true
-    			}
-    			break;
-    		case 'fullname':
-    			person.fullname = data[j]
-    			break;
-    		case 'eid':
-    			person.eid = data[j]
-    			break;
-    	}
+	    			break;
+	    		case 'group':
+    				datas[d] = datas[d].split(' ').join('')
+    				datas[d] = datas[d].replace('ala', 'ala ')
+    				if (datas[d] != '') {
+    					groups.push(datas[d])
+    				}
+	    			break;
+	    		case 'invisible':
+	    			if ((datas[d]== true) || (datas[d] == 1) || (datas[d] == 'yes')) {
+	    				person.invisible = true
+	    			}
+	    			break;
+	    		case 'see_all':
+	    			if ((datas[d] == true) || (datas[d] == 1) || (datas[d] == 'yes')) {
+	    				person.see_all = true
+	    			}
+	    			break;
+	    		case 'fullname':
+	    			person.fullname = datas[d]
+	    			break;
+	    		case 'eid':
+	    			person.eid = datas[d]
+	    			break;
+	    	}
+	    }
     }
     person.groups = groups
     person.addresses = addresses
@@ -154,74 +182,65 @@ function updatePerson(indices, iExist, data) {
 	var addresses = person.addresses
 
     for (var j=0; j<indices.length; j++) {	
+    	var datas = data[j].split('/')
 
-    	switch (indices[j].type) {
-    		case 'address':
-    			switch (indices[j].content.type) {
-    				case 'phone':
-    					var letters = /^[A-Za-z]+$/;
-    					data[j] = data[j].split(letters).join('')
-    					letters = /[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/
-    					data[j] = data[j].split(letters).join('')
-    					if (data[j] != '') {
-	    					const number = phoneUtil.parseAndKeepRawInput(data[j], 'BR');
-    						if (phoneUtil.isValidNumberForRegion(number, 'BR')) {
-	    						data[j] = phoneUtil.format(number, PNF.E164)
-	    						data[j] = data[j].replace('+','')
-    						}
-    					}
-    					break;
-    				case 'email':
-    					break;
-    			}
+    	for (var d in datas) {
+	    	switch (indices[j].type) {
+	    		case 'address':
+	    			var address;
+	    			switch (indices[j].content.type) {
+	    				case 'phone':
+	    					address = checkPhone(datas[d])
+	    					break;
+	    				case 'email':
+	    					address = checkEmail(datas[d])
+	    					break;
+	    			}
 
-    			var exist = false;
-				if (data[j] != '') {
-					var aux = Object.assign({}, indices[j].content)
-					for (var i=0; i<addresses.length; i++) {
-						if (addresses[i].address == aux.address) {
-							exist = true;
+					if (address != -1) {
+						var exist = false
+						
+						for (var i=0; i<addresses.length; i++) {
+							if (addresses[i].address == address) {
+								exist = true
+							}
+						}
+
+						if (!exist) {
+							var aux = Object.assign({}, indices[j].content)
+							aux.address = address
+							addresses.push(aux)
 						}
 					}
-					if (!exist) {
-						aux.address = data[j]
-						addresses.push(aux)
-					}
-				}
-    			break;
-    		case 'group':
-    			var aux = data[j].split('/')
-    			for (var a in aux) {
+	    			break;
+	    		case 'group':
     				var exist = false;
-    				aux[a] = aux[a].split(' ').join('')
-    				aux[a] = aux[a].replace('ala', 'ala ')
-					for (var i=0; i<addresses.length; i++) {
-						if (groups[i] == aux[a]) {
+    				datas[d] = datas[d].split(' ').join('')
+    				datas[d] = datas[d].replace('ala', 'ala ')
+					for (var i=0; i<groups.length; i++) {
+						if (groups[i] == datas[d]) {
 							exist = true;
 						}
 					}
-					if (!exist && (aux[a] != '')){
-    					groups.push(aux[a])
+					if (!exist && (datas[d] != '')){
+    					groups.push(datas[d])
 					}
-    			}
-    			break;
-    		case 'invisible':
-    			if ((data[j] == true) || (data[j] == 1) || (data[j] == 'yes')) {
-    				person.invisible = true
-    			}
-    			break;
-    		case 'see_all':
-    			if ((data[j] == true) || (data[j] == 1) || (data[j] == 'yes')) {
-    				person.see_all = true
-    			}
-    			break;
-    		case 'fullname':
-    			person.fullname = data[j]
-    			break;
-    		case 'eid':
-    			person.eid = data[j]
-    			break;
-    	}
+	    			break;
+	    		case 'invisible':
+	    			if ((datas[d] == true) || (datas[d] == 1) || (datas[d] == 'yes')) {
+	    				person.invisible = true
+	    			}
+	    			break;
+	    		case 'see_all':
+	    			if ((datas[d] == true) || (datas[d] == 1) || (datas[d] == 'yes')) {
+	    				person.see_all = true
+	    			}
+	    			break;
+	    		case 'fullname':
+	    			person.fullname = datas[d]
+	    			break;
+	    	}
+	    }
     }
     person.groups = groups
     person.addresses = addresses
@@ -235,11 +254,12 @@ function write(content) {
 }
 
 function checkExistence(eid) {
-	 for (var i=0; i<persons.length; i++) {
-		 if (persons[i].eid == eid) {
-		 	return i;
-		 }
-	 }
+	for (var i=0; i<persons.length; i++) {
+		if (persons[i].eid == eid) {
+			return i;
+		}
+	}
+
 	return -1
 }
 
