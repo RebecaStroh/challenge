@@ -112,6 +112,20 @@ function checkPhone(phone) {
 	return phone;
 }
 
+function checkGroup(group) {
+	var groupSlices = group.split(' ')
+	group = '';
+	for (k in groupSlices) {
+		if (groupSlices[k] != '') {
+			if (group != '') {
+				group += ' '
+			}
+			group += groupSlices[k]
+		}
+	}
+	return group;
+}
+
 function createNew(indices, data) {
    	var groups = []
 	var addresses = []
@@ -146,10 +160,9 @@ function createNew(indices, data) {
     				}
 	    			break;
 	    		case 'group':
-    				datas[d] = datas[d].split(' ').join('')
-    				datas[d] = datas[d].replace('ala', 'ala ')
-    				if (datas[d] != '') {
-    					groups.push(datas[d])
+	    			var group = checkGroup(datas[d])
+    				if (group != '') {
+    					groups.push(group)
     				}
 	    			break;
 	    		case 'invisible':
@@ -214,17 +227,21 @@ function updatePerson(indices, iExist, data) {
 					}
 	    			break;
 	    		case 'group':
-    				var exist = false;
-    				datas[d] = datas[d].split(' ').join('')
-    				datas[d] = datas[d].replace('ala', 'ala ')
-					for (var i=0; i<groups.length; i++) {
-						if (groups[i] == datas[d]) {
-							exist = true;
+	    			var group = checkGroup(datas[d])
+
+    				if (group != '') {
+	    				var exist = false;
+
+						for (var i=0; i<groups.length; i++) {
+							if (groups[i] == group) {
+								exist = true;
+							}
 						}
-					}
-					if (!exist && (datas[d] != '')){
-    					groups.push(datas[d])
-					}
+
+						if (!exist){
+	    					groups.push(group)
+						}
+    				}
 	    			break;
 	    		case 'invisible':
 	    			if ((datas[d] == true) || (datas[d] == 1) || (datas[d] == 'yes')) {
