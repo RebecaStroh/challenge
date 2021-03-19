@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const PNF = require('google-libphonenumber').PhoneNumberFormat;
 const phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance()
 
 var persons = new Array()
@@ -90,25 +91,29 @@ function createNew(indices, data) {
 	}
 
     for (var j=0; j<indices.length; j++) {	
-
     	switch (indices[j].type) {
     		case 'address':
-    			var aux = indices[j].content
     			switch (indices[j].content.type) {
     				case 'phone':
-    					var letters = /^[A-Za-z]+$/;
-    					data[j] = data[j].split(letters).join('')
-    					letters = /[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/
+    					var letters = /^[A-Za-z`!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]+$/;
     					data[j] = data[j].split(letters).join('')
     					if (data[j] != '') {
-    						aux.address = data[j]
+	    					const number = phoneUtil.parseAndKeepRawInput(data[j], 'BR');
+    						if (phoneUtil.isValidNumberForRegion(number, 'BR')) {
+	    						data[j] = phoneUtil.format(number, PNF.E164)
+	    						data[j] = data[j].replace('+','')
+	    						var aux = Object.assign({}, indices[j].content);
+	    						aux.address = data[j]
+	    						addresses.push(aux)
+    						}
     					}
     					break;
     				case 'email':
+    					var aux = Object.assign({}, indices[j].content);
     					aux.address = data[j]
+    					addresses.push(aux)
     					break;
     			}
-    			addresses.push(aux)
     			break;
     		case 'group':
     			var aux = data[j].split('/')
@@ -158,6 +163,13 @@ function updatePerson(indices, iExist, data) {
     					data[j] = data[j].split(letters).join('')
     					letters = /[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/
     					data[j] = data[j].split(letters).join('')
+    					if (data[j] != '') {
+	    					const number = phoneUtil.parseAndKeepRawInput(data[j], 'BR');
+    						if (phoneUtil.isValidNumberForRegion(number, 'BR')) {
+	    						data[j] = phoneUtil.format(number, PNF.E164)
+	    						data[j] = data[j].replace('+','')
+    						}
+    					}
     					break;
     				case 'email':
     					break;
@@ -165,7 +177,7 @@ function updatePerson(indices, iExist, data) {
 
     			var exist = false;
 				if (data[j] != '') {
-					var aux = indices[j].content
+					var aux = Object.assign({}, indices[j].content)
 					for (var i=0; i<addresses.length; i++) {
 						if (addresses[i].address == aux.address) {
 							exist = true;
@@ -219,8 +231,6 @@ function updatePerson(indices, iExist, data) {
 function write(content) {
 	fs.writeFile(path.join(__dirname, 'output.json'), JSON.stringify(content), (err) =>{
 		if (err) throw err
-
-		console.log(persons)
 	})
 }
 
