@@ -1,79 +1,92 @@
 const fs = require('fs')
+const readline = require('readline');
 const path = require('path')
 const PNF = require('google-libphonenumber').PhoneNumberFormat;
 const phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance()
 
+var indices = []
+var eid = 0
 var persons = new Array()
 
 function read() {
-	fs.readFile(path.join(__dirname, 'input.csv'), 'utf8', (err, content) => { 
-		if (err) throw err
+	const readable = fs.createReadStream(path.join(__dirname, 'input.csv'))
+	const rl = readline.createInterface({input: readable})
 
-		// trata das virgulas 
-		var t = content.split('"')
+
+	rl.on('line', (line) => {
+		// treat comas in a string 
+		var t = line.split('"')
 		for (var i=1;i<t.length; i=i+2){
 			t[i] = t[i].split(',').join('/')
 		}
-		content = t.join('')
+		line = t.join('')
 
-		// divide o arquivo em linhas e colunas
-	    var allTextLines = content.split(/\r\n|\n/)
-	    var headings = allTextLines[0].split(',')
-	    var eid = 0;
-	    var lines = []
-	    var indices = []
-
-	    for (var i=0; i<headings.length; i++) {
-	    	headings[i] = headings[i].split('"').join('')
-	    	var aux = headings[i].split(' ')
-	
-	    	switch (aux[0]) {
-	    		case 'email':
-	    			var tags = new Array()
-	    			for (var j=1; j<aux.length; j++) {
-	    				tags.push(aux[j])
-	    			}
-	    			var address = {
-				    	type: 'email',
-				    	tags: tags,
-				    	address: ''
-				    }
-	    			indices.push({type:'address', content: address})
-	    			break;
-	    		case 'phone':
-	    			var tags = new Array()
-	    			for (var j=1; j<aux.length; j++) {
-	    				tags.push(aux[j])
-	    			}
-	    			var address = {
-				    	type: 'phone',
-				    	tags: tags,
-				    	address: ''
-				    }
-	    			indices.push({type:'address', content: address})
-	    			break;
-	    		case 'eid':
-	    			eid = i;
-	    		default:
-	    			indices.push({type:aux[0]})
-	    			break;
-	    	}
-	    }
-
-	    for (var i=1; i<allTextLines.length; i++) {
-	    	var data = allTextLines[i].split(',')
-
-	    	var iExist = checkExistence(data[eid])
-	    	if (iExist == -1) {
-	    		createNew(indices, data)
-	    	} else {
-	    		updatePerson(indices, iExist, data)
-	    	}
-	    	
+		// check if it's a header or data
+		if (indices.length == 0) {
+			header(line)
+		} else {
+			data(line)
 		}
+	})
 
+	readable.on('end', () => {
 		write(persons)
 	})
+}
+
+function header(line) {
+	var headings = line.split(',')
+
+
+    for (var i=0; i<headings.length; i++) {
+    	var aux = headings[i].split(' ')
+
+    	switch (aux[0]) {
+    		case 'email':
+    			var tags = new Array()
+    			for (var j=1; j<aux.length; j++) {
+    				tags.push(aux[j])
+    			}
+    			var address = {
+			    	type: 'email',
+			    	tags: tags,
+			    	address: ''
+			    }
+    			indices.push({type:'address', content: address})
+    			break;
+    		case 'phone':
+    			var tags = new Array()
+    			for (var j=1; j<aux.length; j++) {
+    				tags.push(aux[j])
+    			}
+    			var address = {
+			    	type: 'phone',
+			    	tags: tags,
+			    	address: ''
+			    }
+    			indices.push({type:'address', content: address})
+    			break;
+    		case 'eid':
+    			eid = i;
+    		default:
+    			indices.push({type:aux[0]})
+    			break;
+    	}
+    }
+}
+
+function data(line) {
+    for (var i=1; i<line.length; i++) {
+    	const data = line.split(',')
+
+    	var iExist = checkExistence(data[eid])
+    	if (iExist == -1) {
+    		createNew(data)
+    	} else {
+    		updatePerson(iExist, data)
+    	}
+
+	}
 }
 
 function checkEmail(email) {
@@ -126,7 +139,7 @@ function checkGroup(group) {
 	return group;
 }
 
-function createNew(indices, data) {
+function createNew(data) {
    	var groups = []
 	var addresses = []
 	var person = {
@@ -189,7 +202,7 @@ function createNew(indices, data) {
     persons.push(person)
 }
 
-function updatePerson(indices, iExist, data) {
+function updatePerson(iExist, data) {
 	var person = persons[iExist]
    	var groups = person.groups
 	var addresses = person.addresses
