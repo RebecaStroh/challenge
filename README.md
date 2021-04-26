@@ -1,5 +1,8 @@
 "#challenge" 
 
+Description:
+	Transform a .csv content in a json
+
 Developed by:
 	Rebeca Portes Stroh
 
